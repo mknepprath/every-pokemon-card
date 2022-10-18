@@ -36,7 +36,7 @@ To bundle up dependencies, run:
 pip install -t lambda_function -r requirements.txt
 ```
 
-To bundle up the code, add the main.py file to the lambda directory. Zip this
+To bundle up the code, add the main.py file to the lambda_function directory. Zip this
 directory and upload it to AWS Lambda.
 
 ## main.py
