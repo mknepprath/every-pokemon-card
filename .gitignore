@@ -1,2 +1,4 @@
 .env.local
 .DS_Store
+lambda_function
+lambda_function.zip

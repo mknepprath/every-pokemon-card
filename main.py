@@ -30,17 +30,28 @@ def lambda_handler(event, context):
 
     image = json["data"][0]["images"]["large"]
     name = json["data"][0]["name"]
+    tcgSet = json["data"][0]["set"]["name"]
+    releaseDate = json["data"][0]["set"]["releaseDate"]
+    artist = json["data"][0]["artist"]
 
-    filename = "temp.png"
+    filename = "/tmp/temp.png"
     request = requests.get(image, stream=True)
     if request.status_code == 200:
         with open(filename, 'wb') as image:
             for chunk in request:
                 image.write(chunk)
 
+        alt_text = "%s (%s) released %s. Illustrated by %s." % (
+            name, tcgSet, releaseDate, artist)
+
         media_response = api.media_upload(filename=filename)
+        api.create_media_metadata(media_response.media_id, alt_text=alt_text)
         api.update_status(status=name, media_ids=[media_response.media_id])
 
         os.remove(filename)
     else:
         print("Unable to download image")
+
+
+# Uncomment to run locally:
+# lambda_handler(None, None)
