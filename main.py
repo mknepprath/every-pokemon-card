@@ -3,6 +3,7 @@ import random
 
 import requests
 import tweepy
+from mastodon import Mastodon
 
 
 def lambda_handler(event, context):
@@ -13,6 +14,13 @@ def lambda_handler(event, context):
     access_token_secret = os.environ.get('TWITTER_ACCESS_TOKEN_SECRET')
     auth.set_access_token(access_token, access_token_secret)
     api = tweepy.API(auth, wait_on_rate_limit=True)
+
+    mastodon = Mastodon(
+        api_base_url='https://mastodon.social',
+        client_id=os.environ.get('MASTODON_CLIENT_KEY'),
+        client_secret=os.environ.get('MASTODON_CLIENT_SECRET'),
+        access_token=os.environ.get('MASTODON_ACCESS_TOKEN'),
+    )
 
     response = requests.get(
         'https://api.pokemontcg.io/v2/cards?page=1&pageSize=1')
@@ -44,9 +52,16 @@ def lambda_handler(event, context):
         alt_text = "%s (%s) released %s. Illustrated by %s." % (
             name, tcgSet, releaseDate, artist)
 
-        media_response = api.media_upload(filename=filename)
-        api.create_media_metadata(media_response.media_id, alt_text=alt_text)
-        api.update_status(status=name, media_ids=[media_response.media_id])
+        twitter_media_response = api.media_upload(filename=filename)
+        api.create_media_metadata(
+            twitter_media_response.media_id, alt_text=alt_text)
+        api.update_status(status=name, media_ids=[
+                          twitter_media_response.media_id])
+
+        mastodon_media_response = mastodon.media_post(
+            filename, description=alt_text)
+        mastodon.status_post(status=name, media_ids=[
+                             mastodon_media_response.id])
 
         os.remove(filename)
     else:
