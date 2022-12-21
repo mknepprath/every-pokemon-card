@@ -55,13 +55,15 @@ def lambda_handler(event, context):
         twitter_media_response = api.media_upload(filename=filename)
         api.create_media_metadata(
             twitter_media_response.media_id, alt_text=alt_text)
-        api.update_status(status=name, media_ids=[
-                          twitter_media_response.media_id])
+        if twitter_media_response.media_id:
+            api.update_status(status=name, media_ids=[
+                twitter_media_response.media_id])
 
         mastodon_media_response = mastodon.media_post(
             filename, description=alt_text)
-        mastodon.status_post(status=name, media_ids=[
-                             mastodon_media_response.id])
+        if mastodon_media_response.id:
+            mastodon.status_post(status=name, media_ids=[
+                mastodon_media_response.id])
 
         os.remove(filename)
     else:
