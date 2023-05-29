@@ -2,18 +2,18 @@ import os
 import random
 
 import requests
-import tweepy
+# import tweepy
 from mastodon import Mastodon
 
 
 def lambda_handler(event, context):
-    consumer_key = os.environ.get('TWITTER_CONSUMER_KEY')
-    consumer_secret = os.environ.get('TWITTER_CONSUMER_SECRET')
-    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-    access_token = os.environ.get('TWITTER_ACCESS_TOKEN')
-    access_token_secret = os.environ.get('TWITTER_ACCESS_TOKEN_SECRET')
-    auth.set_access_token(access_token, access_token_secret)
-    api = tweepy.API(auth, wait_on_rate_limit=True)
+    # consumer_key = os.environ.get('TWITTER_CONSUMER_KEY')
+    # consumer_secret = os.environ.get('TWITTER_CONSUMER_SECRET')
+    # auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+    # access_token = os.environ.get('TWITTER_ACCESS_TOKEN')
+    # access_token_secret = os.environ.get('TWITTER_ACCESS_TOKEN_SECRET')
+    # auth.set_access_token(access_token, access_token_secret)
+    # api = tweepy.API(auth, wait_on_rate_limit=True)
 
     mastodon = Mastodon(
         api_base_url='https://mastodon.social',
@@ -52,12 +52,12 @@ def lambda_handler(event, context):
         alt_text = "%s (%s) released %s. Illustrated by %s." % (
             name, tcgSet, releaseDate, artist)
 
-        twitter_media_response = api.media_upload(filename=filename)
-        api.create_media_metadata(
-            twitter_media_response.media_id, alt_text=alt_text)
-        if twitter_media_response.media_id:
-            api.update_status(status=name, media_ids=[
-                twitter_media_response.media_id])
+        # twitter_media_response = api.media_upload(filename=filename)
+        # api.create_media_metadata(
+        #     twitter_media_response.media_id, alt_text=alt_text)
+        # if twitter_media_response.media_id:
+        #     api.update_status(status=name, media_ids=[
+        #         twitter_media_response.media_id])
 
         mastodon_media_response = mastodon.media_post(
             filename, description=alt_text)
