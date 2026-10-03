@@ -1,9 +1,38 @@
 import os
 import random
+import time
 
 import requests
 # import tweepy
 from mastodon import Mastodon
+
+
+def get_json(url, attempts=5, timeout=6):
+    """GET a URL and parse JSON, retrying the upstream's frequent 5xx.
+
+    api.pokemontcg.io fails roughly half of all requests with a 500 or 502 whose
+    body is either empty or the literal string "error code: 502". Neither parses,
+    so calling .json() on the response raised JSONDecodeError and killed the run.
+    That is why this posted 169 times against 720 scheduled runs.
+
+    Status is checked before parsing, and both the request and the parse are
+    retried with exponential backoff plus jitter -- jitter because this runs on a
+    fixed cron, and a fixed backoff would retry in lockstep with every other
+    client doing the same thing on the hour.
+    """
+    last = None
+    for i in range(attempts):
+        try:
+            response = requests.get(url, timeout=timeout)
+            if response.status_code == 200:
+                return response.json()
+            last = "HTTP %s" % response.status_code
+        except (requests.RequestException, ValueError) as err:
+            last = type(err).__name__
+        if i < attempts - 1:
+            time.sleep(min(2 ** i, 3) * (0.5 + random.random()))
+    raise RuntimeError(
+        "pokemontcg API failed after %d attempts (last: %s)" % (attempts, last))
 
 
 def lambda_handler(event, context):
@@ -22,9 +51,7 @@ def lambda_handler(event, context):
         access_token=os.environ.get('MASTODON_ACCESS_TOKEN'),
     )
 
-    response = requests.get(
-        'https://api.pokemontcg.io/v2/cards?page=1&pageSize=1')
-    json = response.json()
+    json = get_json('https://api.pokemontcg.io/v2/cards?page=1&pageSize=1')
     total_count = json['totalCount']
 
     # get a random number between 1 and total_count
@@ -32,9 +59,8 @@ def lambda_handler(event, context):
 
     # query pokemontcg API for a random card
     # example query: https://api.pokemontcg.io/v2/cards?page=12022&pageSize=1
-    response = requests.get(
+    json = get_json(
         'https://api.pokemontcg.io/v2/cards?page=%s&pageSize=1' % random_number)
-    json = response.json()
 
     image = json["data"][0]["images"]["large"]
     name = json["data"][0]["name"]
@@ -43,7 +69,12 @@ def lambda_handler(event, context):
     artist = json["data"][0]["artist"]
 
     filename = "/tmp/temp.png"
-    request = requests.get(image, stream=True)
+    request = None
+    for i in range(3):
+        request = requests.get(image, stream=True, timeout=10)
+        if request.status_code == 200:
+            break
+        time.sleep(1 + random.random())
     if request.status_code == 200:
         with open(filename, 'wb') as image:
             for chunk in request:
