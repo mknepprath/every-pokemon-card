@@ -66,7 +66,9 @@ def lambda_handler(event, context):
     name = json["data"][0]["name"]
     tcgSet = json["data"][0]["set"]["name"]
     releaseDate = json["data"][0]["set"]["releaseDate"]
-    artist = json["data"][0]["artist"]
+    # Some cards have no artist field (seen 2026-10-04: KeyError: 'artist'),
+    # so the alt text omits the credit rather than crashing the run.
+    artist = json["data"][0].get("artist")
 
     filename = "/tmp/temp.png"
     request = None
@@ -80,8 +82,9 @@ def lambda_handler(event, context):
             for chunk in request:
                 image.write(chunk)
 
-        alt_text = "%s (%s) released %s. Illustrated by %s." % (
-            name, tcgSet, releaseDate, artist)
+        alt_text = "%s (%s) released %s." % (name, tcgSet, releaseDate)
+        if artist:
+            alt_text += " Illustrated by %s." % artist
 
         # twitter_media_response = api.media_upload(filename=filename)
         # api.create_media_metadata(
